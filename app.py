@@ -1,5 +1,6 @@
-from flask import Flask, request, send_file, render_template, jsonify
+from flask import Flask, request, send_file, render_template
 from PIL import Image
+import io
 import os
 
 app = Flask(__name__)
@@ -9,24 +10,24 @@ def index():
     return render_template('index.html')
 
 @app.route('/convert', methods=['POST'])
-def convert_image_to_pdf():
+def convert_image():
     if 'file' not in request.files:
-        return jsonify({"error": "Keine Datei im Formular gefunden"}), 400
+        return {"error": "No file uploaded"}, 400
 
     file = request.files['file']
 
     if file.filename == '':
-        return jsonify({"error": "Keine Datei ausgewählt"}), 400
+        return {"error": "Empty filename"}, 400
 
     try:
-        img = Image.open(file.stream).convert('RGB')
-        output_path = 'converted.pdf'
-        img.save(output_path)
-
-        return send_file(output_path, as_attachment=True)
-
+        image = Image.open(file.stream).convert("RGB")
+        pdf_bytes = io.BytesIO()
+        image.save(pdf_bytes, format='PDF')
+        pdf_bytes.seek(0)
+        return send_file(pdf_bytes, mimetype='application/pdf', download_name='converted.pdf')
     except Exception as e:
-        return jsonify({"error": f"Fehler beim Umwandeln: {str(e)}"}), 500
+        return {"error": str(e)}, 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+# 👇 Wichtig für Railway Deployment
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
