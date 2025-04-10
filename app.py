@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, render_template, send_file
 from PIL import Image
 import io
 import os
@@ -10,24 +10,22 @@ def index():
     return render_template('index.html')
 
 @app.route('/convert', methods=['POST'])
-def convert_image():
+def convert():
     if 'file' not in request.files:
-        return {"error": "No file uploaded"}, 400
+        return {'error': 'No file uploaded'}, 400
 
     file = request.files['file']
-
     if file.filename == '':
-        return {"error": "Empty filename"}, 400
+        return {'error': 'No selected file'}, 400
 
     try:
         image = Image.open(file.stream).convert("RGB")
-        pdf_bytes = io.BytesIO()
-        image.save(pdf_bytes, format='PDF')
-        pdf_bytes.seek(0)
-        return send_file(pdf_bytes, mimetype='application/pdf', download_name='converted.pdf')
+        output = io.BytesIO()
+        image.save(output, format='PDF')
+        output.seek(0)
+        return send_file(output, download_name=f"{os.path.splitext(file.filename)[0]}.pdf", as_attachment=True)
     except Exception as e:
-        return {"error": str(e)}, 500
+        return {'error': str(e)}, 500
 
-# 👇 Wichtig für Railway Deployment
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
